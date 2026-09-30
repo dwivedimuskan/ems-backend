@@ -1,9 +1,21 @@
-FROM maven:3.9-eclipse-temurin-17 AS build
+# Stage 1: Build
+FROM maven:3.9-eclipse-temurin-17 AS builder
 WORKDIR /app
-COPY . .
+
+# Pehle sirf pom.xml copy karo, taaki dependencies cache ho jayein
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
+
+# Ab source code copy karke jar banao
+COPY src src
 RUN mvn clean package -DskipTests
 
-FROM eclipse-temurin:17-jre
+# Stage 2: Run
+FROM eclipse-temurin:17-jre-focal
 WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
+
+# Jar ka naam wildcard se pakdo, taaki naam yaad na rakhna pade
+COPY --from=builder /app/target/*.jar app.jar
+
+EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
